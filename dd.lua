@@ -231,46 +231,80 @@ teleportPlayerToMeButton.MouseButton1Click:Connect(function()
 	end
 end)
 
--- Anti-Kick Lokal
+-- // 1. Anti Kick / Ban by Metatable Hook
 local mt = getrawmetatable(game)
 setreadonly(mt, false)
-local old = mt.__namecall
+local oldNamecall = mt.__namecall
+
 mt.__namecall = newcclosure(function(self, ...)
-	local args = {...}
-	local method = getnamecallmethod()
-	if method == "Kick" or method == "kick" then
-		return warn("Kick attempt blocked!")
-	end
-	return old(self, unpack(args))
+    local args = {...}
+    local method = getnamecallmethod()
+
+    if method == "Kick" or method == "Ban" or tostring(method):lower():find("kick") then
+        warn("❌ Kick/Ban Attempt Blocked!")
+        return
+    end
+
+    return oldNamecall(self, unpack(args))
 end)
 
--- Deteksi Admin
+-- // 2. Anti Log (Prevent logging actions to server)
+local blockedEvents = {"SayMessageRequest", "LogService", "RemoteEvent", "RemoteFunction"}
+
+for _, v in pairs(blockedEvents) do
+    local suc, remote = pcall(function()
+        return game:GetService("ReplicatedStorage"):FindFirstChild(v)
+    end)
+    if suc and remote then
+        remote:Destroy()
+        warn("🛡️ Blocked possible log sender:", v)
+    end
+end
+
+-- // 3. Auto-disable cheat if admin/mod is in game
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
 function isSuspicious(plr)
-	local name = plr.Name:lower()
-	local display = plr.DisplayName:lower()
-	return name:find("admin") or name:find("mod") or display:find("admin") or display:find("mod")
+    local name = plr.Name:lower()
+    local display = plr.DisplayName:lower()
+    return name:find("admin") or name:find("mod") or name:find("staff") or display:find("admin") or display:find("mod")
 end
 
 function disableAllCheats()
-	-- Contoh: menonaktifkan semua cheat aktif
-	espEnabled = false
-	if ESPFolder then ESPFolder:Destroy() end
-	Frame.Visible = false
+    -- replace with your actual cheat disable functions
+    if ESPFolder then ESPFolder:Destroy() end
+    if Frame then Frame.Visible = false end
+    warn("❌ Cheats disabled for safety.")
 end
 
 for _, plr in pairs(Players:GetPlayers()) do
-	if plr ~= LocalPlayer and isSuspicious(plr) then
-		warn("⚠️ Admin/mod terdeteksi saat join!")
-		disableAllCheats()
-	end
+    if plr ~= LocalPlayer and isSuspicious(plr) then
+        disableAllCheats()
+    end
 end
 
 Players.PlayerAdded:Connect(function(plr)
-	if isSuspicious(plr) then
-		warn("⚠️ Admin/mod masuk ke server!")
-		disableAllCheats()
-	end
+    if isSuspicious(plr) then
+        disableAllCheats()
+    end
 end)
+
+-- // 4. Identity Spoofing (Optional - advanced obfuscation)
+pcall(function()
+    LocalPlayer.Name = "Guest" .. math.random(1000,9999)
+    LocalPlayer.DisplayName = "Noob_" .. math.random(10,99)
+end)
+
+-- // 5. Fake crash (Kalau admin masuk, kamu bisa auto "crash")
+function fakeCrash()
+    Frame.Visible = false
+    for i = 1, 100 do
+        task.spawn(function()
+            while true do end
+        end)
+    end
+end
+
+-- kamu bisa panggil: `fakeCrash()` ketika admin/mod ketahuan
+
