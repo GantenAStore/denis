@@ -221,6 +221,48 @@ teleportPlayerToMeButton.MouseButton1Click:Connect(function()
 end)
 
 -- Anti Kick/Ban, Anti Log, Anti Admin
+-- Anti-Ban lanjutan: Hook Kick, pcall Kick, dan Remote proteksi
+-- Hook Kick() langsung
+hookfunction(game.Players.LocalPlayer.Kick, function(...)
+    warn("❌ Attempted Kick via direct method blocked!")
+    return
+end)
+
+-- Proteksi pcall ke fungsi Kick
+local oldPcall = hookfunction(pcall, function(f, ...)
+    local fStr = tostring(f)
+    if fStr:lower():find("kick") then
+        warn("❌ Attempted Kick via pcall blocked!")
+        return true -- pcall returns true (no error), but skips actual kick
+    end
+    return oldPcall(f, ...)
+end)
+
+-- Proteksi Remote yang mencurigakan
+local function protectRemotes()
+    for _, obj in pairs(game:GetDescendants()) do
+        if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
+            if obj.Name:lower():find("ban") or obj.Name:lower():find("kick") then
+                warn("❌ Suspicious Remote removed: " .. obj:GetFullName())
+                obj:Destroy()
+            end
+        end
+    end
+end
+
+-- Jalankan proteksi awal
+protectRemotes()
+
+-- Jalankan saat ada object baru ditambahkan (real-time)
+game.DescendantAdded:Connect(function(obj)
+    if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
+        if obj.Name:lower():find("ban") or obj.Name:lower():find("kick") then
+            warn("❌ Suspicious Remote auto-removed: " .. obj:GetFullName())
+            obj:Destroy()
+        end
+    end
+end)
+
 local mt = getrawmetatable(game)
 setreadonly(mt, false)
 local old = mt.__namecall
