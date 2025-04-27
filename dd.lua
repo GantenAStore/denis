@@ -231,6 +231,59 @@ teleportPlayerToMeButton.MouseButton1Click:Connect(function()
 	end
 end)
 
+-- // 1. Menampilkan teks di layar
+local textDisplay = nil -- Variabel untuk menampung teks yang akan ditampilkan
+
+-- Fungsi untuk menampilkan teks di atas semua pemain
+local function displayTextForAllPlayers(text)
+    if textDisplay then
+        -- Hapus teks sebelumnya jika ada
+        textDisplay:Remove()
+    end
+    
+    textDisplay = Drawing.new("Text")
+    textDisplay.Text = text
+    textDisplay.Color = Color3.fromRGB(255, 255, 255)
+    textDisplay.Size = 30
+    textDisplay.Center = true
+    textDisplay.Outline = true
+    textDisplay.Font = 2
+end
+
+-- Tombol untuk mengubah teks yang ditampilkan
+local textInputButton = Instance.new("TextButton", Frame)
+textInputButton.Size = UDim2.new(1, -20, 0, 30)
+textInputButton.Position = UDim2.new(0, 10, 0, 215)
+textInputButton.Text = "Tampilkan Teks"
+textInputButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+textInputButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+-- Tombol untuk mendapatkan teks dari TextBox dan menampilkannya
+textInputButton.MouseButton1Click:Connect(function()
+    local textToDisplay = playerInput.Text -- Ambil teks dari TextBox
+    if textToDisplay ~= "" then
+        displayTextForAllPlayers(textToDisplay) -- Panggil fungsi untuk menampilkan teks
+    end
+end)
+
+-- // 2. Menampilkan teks untuk setiap pemain
+game:GetService("RunService").RenderStepped:Connect(function()
+    if textDisplay then
+        for _, plr in pairs(game.Players:GetPlayers()) do
+            if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+                local pos, visible = workspace.CurrentCamera:WorldToViewportPoint(plr.Character.HumanoidRootPart.Position)
+                if visible then
+                    textDisplay.Position = Vector2.new(pos.X, pos.Y - 100) -- Menampilkan teks di atas pemain
+                    textDisplay.Visible = true
+                else
+                    textDisplay.Visible = false
+                end
+            end
+        end
+    end
+end)
+
+
 -- // 1. Anti Kick / Ban by Metatable Hook
 local mt = getrawmetatable(game)
 setreadonly(mt, false)
