@@ -11,7 +11,7 @@ logoBtn.Image = "rbxassetid://6031091002" -- Ganti dengan ID gambar yang kamu ma
 
 -- Main Frame
 local Frame = Instance.new("Frame", ScreenGui)
-Frame.Size = UDim2.new(0, 200, 0, 230)
+Frame.Size = UDim2.new(0, 200, 0, 260)
 Frame.Position = UDim2.new(0, 50, 0, 100)
 Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 Frame.Visible = true
