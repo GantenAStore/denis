@@ -118,17 +118,18 @@ broadcastBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 local broadcastFrame = Instance.new("Frame", ScreenGui)
 broadcastFrame.Size = UDim2.new(1, 0, 0, 30)
 broadcastFrame.Position = UDim2.new(0, 0, 0, 0)
-broadcastFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-broadcastFrame.BackgroundTransparency = 0.3
+broadcastFrame.BackgroundTransparency = 1 -- Membuat frame transparan total
 broadcastFrame.Visible = true
 
 local broadcastLabel = Instance.new("TextLabel", broadcastFrame)
 broadcastLabel.Size = UDim2.new(1, 0, 1, 0)
-broadcastLabel.BackgroundTransparency = 1
+broadcastLabel.BackgroundTransparency = 1 -- Label juga transparan
 broadcastLabel.TextColor3 = Color3.new(1, 1, 1)
 broadcastLabel.Font = Enum.Font.SourceSansBold
 broadcastLabel.TextScaled = true
+broadcastLabel.TextStrokeTransparency = 0.4 -- Tambah outline biar tetap kebaca
 broadcastLabel.Text = ""
+
 
 broadcastBtn.MouseButton1Click:Connect(function()
 	broadcastLabel.Text = broadcastBox.Text
