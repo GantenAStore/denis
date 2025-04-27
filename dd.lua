@@ -11,15 +11,23 @@ logoBtn.Image = "rbxassetid://6031091002" -- Ganti dengan ID gambar yang kamu ma
 
 -- Main Frame
 local Frame = Instance.new("Frame", ScreenGui)
-Frame.Size = UDim2.new(0, 200, 0, 260)
+Frame.Size = UDim2.new(0, 300, 0, 230)
 Frame.Position = UDim2.new(0, 50, 0, 100)
 Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 Frame.Visible = true
 
+-- Scrolling Frame (untuk menampilkan teks)
+local ScrollFrame = Instance.new("ScrollingFrame", Frame)
+ScrollFrame.Size = UDim2.new(1, -20, 0, 180)
+ScrollFrame.Position = UDim2.new(0, 10, 0, 10)
+ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+ScrollFrame.ScrollBarThickness = 10
+ScrollFrame.BackgroundTransparency = 1
+
 -- ESP Toggle Button
 local espToggle = Instance.new("TextButton", Frame)
 espToggle.Size = UDim2.new(1, -20, 0, 40)
-espToggle.Position = UDim2.new(0, 10, 0, 10)
+espToggle.Position = UDim2.new(0, 10, 0, 200)
 espToggle.Text = "ESP: OFF"
 espToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 espToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -27,80 +35,51 @@ espToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
 -- Hide UI Button
 local hideUIButton = Instance.new("TextButton", Frame)
 hideUIButton.Size = UDim2.new(1, -20, 0, 40)
-hideUIButton.Position = UDim2.new(0, 10, 0, 60)
+hideUIButton.Position = UDim2.new(0, 10, 0, 240)
 hideUIButton.Text = "Hide UI"
 hideUIButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 hideUIButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 
--- ESP Logic
-local espEnabled = false
-local espObjects = {}
+-- TextBox untuk mengetik pesan
+local messageInput = Instance.new("TextBox", Frame)
+messageInput.Size = UDim2.new(1, -20, 0, 30)
+messageInput.Position = UDim2.new(0, 10, 0, 280)
+messageInput.PlaceholderText = "Ketik pesan..."
+messageInput.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+messageInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+messageInput.Text = ""
 
-function createESP(plr)
-    if plr == game.Players.LocalPlayer then return end
-    local box = Drawing.new("Square")
-    box.Color = Color3.new(1, 0, 0)
-    box.Thickness = 1
-    box.Transparency = 1
-    box.Filled = false
+-- Tombol untuk mengirim teks
+local sendTextButton = Instance.new("TextButton", Frame)
+sendTextButton.Size = UDim2.new(1, -20, 0, 30)
+sendTextButton.Position = UDim2.new(0, 10, 0, 315)
+sendTextButton.Text = "Kirim Teks"
+sendTextButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+sendTextButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 
-    local nameTag = Drawing.new("Text")
-    nameTag.Color = Color3.new(1, 1, 1)
-    nameTag.Size = 16
-    nameTag.Center = true
-    nameTag.Outline = true
-    nameTag.Font = 2
+-- Fungsi untuk mengirim teks ke semua pemain
+local function sendTextToAllPlayers(text)
+    -- Buat frame untuk teks
+    local textFrame = Instance.new("TextLabel", ScrollFrame)
+    textFrame.Size = UDim2.new(1, -20, 0, 30)
+    textFrame.Position = UDim2.new(0, 10, 0, ScrollFrame.CanvasSize.Y.Offset + 10)
+    textFrame.Text = text
+    textFrame.TextColor3 = Color3.fromRGB(255, 255, 255)
+    textFrame.BackgroundTransparency = 1
+    textFrame.TextSize = 16
+    textFrame.TextWrapped = true
+    textFrame.TextXAlignment = Enum.TextXAlignment.Left
 
-    espObjects[plr] = {Box = box, Name = nameTag}
+    -- Update canvas size agar UI bisa digulir
+    ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, ScrollFrame.CanvasSize.Y.Offset + textFrame.Size.Y.Offset + 10)
 end
 
-function removeESP(plr)
-    if espObjects[plr] then
-        espObjects[plr].Box:Remove()
-        espObjects[plr].Name:Remove()
-        espObjects[plr] = nil
-    end
-end
-
-for _, player in ipairs(game.Players:GetPlayers()) do
-    createESP(player)
-end
-
-game.Players.PlayerAdded:Connect(createESP)
-game.Players.PlayerRemoving:Connect(removeESP)
-
-game:GetService("RunService").RenderStepped:Connect(function()
-    if not espEnabled then
-        for _, v in pairs(espObjects) do
-            v.Box.Visible = false
-            v.Name.Visible = false
-        end
-        return
-    end
-
-    for plr, objs in pairs(espObjects) do
-        if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-            local pos, visible = workspace.CurrentCamera:WorldToViewportPoint(plr.Character.HumanoidRootPart.Position)
-            if visible then
-                local head = plr.Character:FindFirstChild("Head")
-                local root = plr.Character:FindFirstChild("HumanoidRootPart")
-                if head and root then
-                    objs.Box.Size = Vector2.new(60, 100)
-                    objs.Box.Position = Vector2.new(pos.X - 30, pos.Y - 50)
-                    objs.Box.Visible = true
-
-                    objs.Name.Position = Vector2.new(pos.X, pos.Y - 60)
-                    objs.Name.Text = plr.Name
-                    objs.Name.Visible = true
-                end
-            else
-                objs.Box.Visible = false
-                objs.Name.Visible = false
-            end
-        else
-            objs.Box.Visible = false
-            objs.Name.Visible = false
-        end
+-- Tombol untuk mengirim pesan
+sendTextButton.MouseButton1Click:Connect(function()
+    local text = messageInput.Text
+    if text ~= "" then
+        sendTextToAllPlayers(text)
+        messageInput.Text = ""  -- Resetkan input setelah mengirim teks
     end
 end)
 
@@ -118,46 +97,10 @@ logoBtn.MouseButton1Click:Connect(function()
     Frame.Visible = not Frame.Visible
 end)
 
--- Drag support
-local UIS = game:GetService("UserInputService")
-local dragging, dragInput, dragStart, startPos
-
-local function update(input)
-	if not dragging then return end
-	local delta = input.Position - dragStart
-	Frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-end
-
-Frame.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		dragging = true
-		dragStart = input.Position
-		startPos = Frame.Position
-
-		input.Changed:Connect(function()
-			if input.UserInputState == Enum.UserInputState.End then
-				dragging = false
-			end
-		end)
-	end
-end)
-
-Frame.InputChanged:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-		dragInput = input
-	end
-end)
-
-UIS.InputChanged:Connect(function(input)
-	if input == dragInput then
-		update(input)
-	end
-end)
-
--- TextBox untuk mengetik nama player
+-- Teleportation Section
 local playerInput = Instance.new("TextBox", Frame)
 playerInput.Size = UDim2.new(1, -20, 0, 30)
-playerInput.Position = UDim2.new(0, 10, 0, 110)
+playerInput.Position = UDim2.new(0, 10, 0, 355)
 playerInput.PlaceholderText = "Masukkan nama pemain"
 playerInput.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 playerInput.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -166,7 +109,7 @@ playerInput.Text = ""
 -- Tombol Teleport ke Pemain
 local teleportToPlayerButton = Instance.new("TextButton", Frame)
 teleportToPlayerButton.Size = UDim2.new(1, -20, 0, 30)
-teleportToPlayerButton.Position = UDim2.new(0, 10, 0, 145)
+teleportToPlayerButton.Position = UDim2.new(0, 10, 0, 390)
 teleportToPlayerButton.Text = "Teleport ke Pemain"
 teleportToPlayerButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 teleportToPlayerButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -174,116 +117,60 @@ teleportToPlayerButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 -- Tombol Teleport Pemain ke Saya
 local teleportPlayerToMeButton = Instance.new("TextButton", Frame)
 teleportPlayerToMeButton.Size = UDim2.new(1, -20, 0, 30)
-teleportPlayerToMeButton.Position = UDim2.new(0, 10, 0, 180)
+teleportPlayerToMeButton.Position = UDim2.new(0, 10, 0, 425)
 teleportPlayerToMeButton.Text = "Teleport Pemain ke Saya"
 teleportPlayerToMeButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 teleportPlayerToMeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 
 -- Fungsi Teleport ke Pemain yang Ditulis Namanya
 teleportToPlayerButton.MouseButton1Click:Connect(function()
-	local targetName = playerInput.Text
-	if targetName == "" then return end
+    local targetName = playerInput.Text
+    if targetName == "" then return end
 
-	local foundPlayer = nil
-	for _, plr in pairs(game.Players:GetPlayers()) do
-		-- Mencocokkan nama sebagian
-		if plr.Name:lower():find(targetName:lower()) then
-			foundPlayer = plr
-			break
-		end
-	end
+    local foundPlayer = nil
+    for _, plr in pairs(game.Players:GetPlayers()) do
+        if plr.Name:lower():find(targetName:lower()) then
+            foundPlayer = plr
+            break
+        end
+    end
 
-	if foundPlayer and foundPlayer.Character and foundPlayer.Character:FindFirstChild("HumanoidRootPart") then
-		local targetPos = foundPlayer.Character.HumanoidRootPart.Position
-		local myChar = game.Players.LocalPlayer.Character
-		if myChar and myChar:FindFirstChild("HumanoidRootPart") then
-			-- Teleport ke pemain yang dipilih
-			myChar:MoveTo(targetPos + Vector3.new(0, 3, 0)) -- Sedikit di atas supaya tidak nyangkut
-		end
-	else
-		warn("Pemain tidak ditemukan atau tidak valid.")
-	end
+    if foundPlayer and foundPlayer.Character and foundPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local targetPos = foundPlayer.Character.HumanoidRootPart.Position
+        local myChar = game.Players.LocalPlayer.Character
+        if myChar and myChar:FindFirstChild("HumanoidRootPart") then
+            myChar:MoveTo(targetPos + Vector3.new(0, 3, 0))
+        end
+    else
+        warn("Pemain tidak ditemukan atau tidak valid.")
+    end
 end)
 
 -- Fungsi Teleport Pemain ke Posisi Saya
 teleportPlayerToMeButton.MouseButton1Click:Connect(function()
-	local targetName = playerInput.Text
-	if targetName == "" then return end
+    local targetName = playerInput.Text
+    if targetName == "" then return end
 
-	local foundPlayer = nil
-	for _, plr in pairs(game.Players:GetPlayers()) do
-		-- Mencocokkan nama sebagian
-		if plr.Name:lower():find(targetName:lower()) then
-			foundPlayer = plr
-			break
-		end
-	end
-
-	if foundPlayer and foundPlayer.Character and foundPlayer.Character:FindFirstChild("HumanoidRootPart") then
-		local targetPos = game.Players.LocalPlayer.Character.HumanoidRootPart.Position
-		local plrChar = foundPlayer.Character
-		if plrChar and plrChar:FindFirstChild("HumanoidRootPart") then
-			-- Teleport pemain ke posisi saya
-			plrChar:MoveTo(targetPos + Vector3.new(0, 3, 0)) -- Sedikit di atas supaya tidak nyangkut
-		end
-	else
-		warn("Pemain tidak ditemukan atau tidak valid.")
-	end
-end)
-
--- // 1. Menampilkan teks di layar
-local textDisplay = nil -- Variabel untuk menampung teks yang akan ditampilkan
-
--- Fungsi untuk menampilkan teks di atas semua pemain
-local function displayTextForAllPlayers(text)
-    if textDisplay then
-        -- Hapus teks sebelumnya jika ada
-        textDisplay:Remove()
-    end
-    
-    textDisplay = Drawing.new("Text")
-    textDisplay.Text = text
-    textDisplay.Color = Color3.fromRGB(255, 255, 255)
-    textDisplay.Size = 30
-    textDisplay.Center = true
-    textDisplay.Outline = true
-    textDisplay.Font = 2
-end
-
--- Tombol untuk mengubah teks yang ditampilkan
-local textInputButton = Instance.new("TextButton", Frame)
-textInputButton.Size = UDim2.new(1, -20, 0, 30)
-textInputButton.Position = UDim2.new(0, 10, 0, 215)
-textInputButton.Text = "Tampilkan Teks"
-textInputButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-textInputButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-
--- Tombol untuk mendapatkan teks dari TextBox dan menampilkannya
-textInputButton.MouseButton1Click:Connect(function()
-    local textToDisplay = playerInput.Text -- Ambil teks dari TextBox
-    if textToDisplay ~= "" then
-        displayTextForAllPlayers(textToDisplay) -- Panggil fungsi untuk menampilkan teks
-    end
-end)
-
--- // 2. Menampilkan teks untuk setiap pemain
-game:GetService("RunService").RenderStepped:Connect(function()
-    if textDisplay then
-        for _, plr in pairs(game.Players:GetPlayers()) do
-            if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-                local pos, visible = workspace.CurrentCamera:WorldToViewportPoint(plr.Character.HumanoidRootPart.Position)
-                if visible then
-                    textDisplay.Position = Vector2.new(pos.X, pos.Y - 100) -- Menampilkan teks di atas pemain
-                    textDisplay.Visible = true
-                else
-                    textDisplay.Visible = false
-                end
-            end
+    local foundPlayer = nil
+    for _, plr in pairs(game.Players:GetPlayers()) do
+        if plr.Name:lower():find(targetName:lower()) then
+            foundPlayer = plr
+            break
         end
     end
+
+    if foundPlayer and foundPlayer.Character and foundPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local targetPos = game.Players.LocalPlayer.Character.HumanoidRootPart.Position
+        local plrChar = foundPlayer.Character
+        if plrChar and plrChar:FindFirstChild("HumanoidRootPart") then
+            plrChar:MoveTo(targetPos + Vector3.new(0, 3, 0))
+        end
+    else
+        warn("Pemain tidak ditemukan atau tidak valid.")
+    end
 end)
 
-
+-- Tambahkan Anti-Ban dan Anti-Kick di sini jika diperlukan
 -- // 1. Anti Kick / Ban by Metatable Hook
 local mt = getrawmetatable(game)
 setreadonly(mt, false)
@@ -359,5 +246,4 @@ function fakeCrash()
     end
 end
 
--- kamu bisa panggil: `fakeCrash()` ketika admin/mod ketahuan
-
+-- kamu bisa panggil: fakeCrash() ketika admin/mod ketahuan
