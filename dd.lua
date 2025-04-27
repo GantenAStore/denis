@@ -230,3 +230,47 @@ teleportPlayerToMeButton.MouseButton1Click:Connect(function()
 		warn("Pemain tidak ditemukan atau tidak valid.")
 	end
 end)
+
+-- Anti-Kick Lokal
+local mt = getrawmetatable(game)
+setreadonly(mt, false)
+local old = mt.__namecall
+mt.__namecall = newcclosure(function(self, ...)
+	local args = {...}
+	local method = getnamecallmethod()
+	if method == "Kick" or method == "kick" then
+		return warn("Kick attempt blocked!")
+	end
+	return old(self, unpack(args))
+end)
+
+-- Deteksi Admin
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+function isSuspicious(plr)
+	local name = plr.Name:lower()
+	local display = plr.DisplayName:lower()
+	return name:find("admin") or name:find("mod") or display:find("admin") or display:find("mod")
+end
+
+function disableAllCheats()
+	-- Contoh: menonaktifkan semua cheat aktif
+	espEnabled = false
+	if ESPFolder then ESPFolder:Destroy() end
+	Frame.Visible = false
+end
+
+for _, plr in pairs(Players:GetPlayers()) do
+	if plr ~= LocalPlayer and isSuspicious(plr) then
+		warn("⚠️ Admin/mod terdeteksi saat join!")
+		disableAllCheats()
+	end
+end
+
+Players.PlayerAdded:Connect(function(plr)
+	if isSuspicious(plr) then
+		warn("⚠️ Admin/mod masuk ke server!")
+		disableAllCheats()
+	end
+end)
