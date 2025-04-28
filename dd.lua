@@ -220,74 +220,74 @@ teleportPlayerToMeButton.MouseButton1Click:Connect(function()
 	end
 end)
 
--- Anti Kick/Ban, Anti Log, Anti Admin
--- Anti-Ban lanjutan: Hook Kick, pcall Kick, dan Remote proteksi
--- Hook Kick() langsung
-hookfunction(game.Players.LocalPlayer.Kick, function(...)
-    warn("❌ Attempted Kick via direct method blocked!")
-    return
-end)
-
--- Proteksi pcall ke fungsi Kick
-local oldPcall = hookfunction(pcall, function(f, ...)
-    local fStr = tostring(f)
-    if fStr:lower():find("kick") then
-        warn("❌ Attempted Kick via pcall blocked!")
-        return true -- pcall returns true (no error), but skips actual kick
-    end
-    return oldPcall(f, ...)
-end)
-
--- Proteksi Remote yang mencurigakan
-local function protectRemotes()
-    for _, obj in pairs(game:GetDescendants()) do
-        if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
-            if obj.Name:lower():find("ban") or obj.Name:lower():find("kick") then
-                warn("❌ Suspicious Remote removed: " .. obj:GetFullName())
-                obj:Destroy()
-            end
-        end
-    end
-end
-
--- Jalankan proteksi awal
-protectRemotes()
-
--- Jalankan saat ada object baru ditambahkan (real-time)
-game.DescendantAdded:Connect(function(obj)
-    if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
-        if obj.Name:lower():find("ban") or obj.Name:lower():find("kick") then
-            warn("❌ Suspicious Remote auto-removed: " .. obj:GetFullName())
-            obj:Destroy()
-        end
-    end
-end)
-
+-- // Anti-Kick / Anti-Ban
 local mt = getrawmetatable(game)
 setreadonly(mt, false)
-local old = mt.__namecall
-mt.__namecall = newcclosure(function(self,...)
-	if getnamecallmethod():lower():find("kick") then
-		warn("❌ Kick attempt blocked!")
-		return
-	end
-	return old(self,...)
+local oldNamecall = mt.__namecall
+
+mt.__namecall = newcclosure(function(self, ...)
+    local method = getnamecallmethod()
+    if method == "Kick" or tostring(method):lower():find("kick") or tostring(method):lower():find("ban") then
+        warn("❌ Kick/Ban Attempt Blocked!")
+        return
+    end
+    return oldNamecall(self, ...)
 end)
-local blocked = {"SayMessageRequest", "LogService", "RemoteEvent", "RemoteFunction"}
-for _, v in pairs(blocked) do
-	local s, r = pcall(function()
-		return game:GetService("ReplicatedStorage"):FindFirstChild(v)
-	end)
-	if s and r then r:Destroy() end
+
+-- // Anti Log Event
+local blockedEvents = {"SayMessageRequest", "LogService", "RemoteEvent", "RemoteFunction"}
+for _, v in pairs(blockedEvents) do
+    local suc, obj = pcall(function()
+        return game:GetService("ReplicatedStorage"):FindFirstChild(v)
+    end)
+    if suc and obj then
+        obj:Destroy()
+        warn("🛡️ Blocked possible log sender:", v)
+    end
 end
-function isMod(p)
-	local n = p.Name:lower()
-	local d = p.DisplayName:lower()
-	return n:find("admin") or n:find("mod") or d:find("admin") or d:find("mod")
+
+-- // Admin Detection (Safe Mode)
+function isSuspicious(plr)
+    local name = plr.Name:lower()
+    local disp = plr.DisplayName:lower()
+    return name:find("admin") or name:find("mod") or name:find("staff") or disp:find("admin") or disp:find("mod")
 end
-function disable()
-	Frame.Visible = false
-	warn("❌ UI Disabled due to mod detection")
+
+function disableAllCheats()
+    espEnabled = false
+    Frame.Visible = false
+    for _, obj in pairs(espObjects) do
+        obj.Box:Remove()
+        obj.Name:Remove()
+    end
+    espObjects = {}
+    warn("❌ Cheats disabled for safety.")
 end
-for _, p in pairs(game.Players:GetPlayers()) do if p~=game.Players.LocalPlayer and isMod(p) then disable() end end
-game.Players.PlayerAdded:Connect(function(p) if isMod(p) then disable() end end)
+
+for _, plr in pairs(Players:GetPlayers()) do
+    if plr ~= LocalPlayer and isSuspicious(plr) then
+        disableAllCheats()
+    end
+end
+
+Players.PlayerAdded:Connect(function(plr)
+    if isSuspicious(plr) then
+        disableAllCheats()
+    end
+end)
+
+-- // Optional Identity Spoofing
+pcall(function()
+    LocalPlayer.Name = "Guest" .. math.random(1000, 9999)
+    LocalPlayer.DisplayName = "Noob_" .. math.random(10, 99)
+end)
+
+-- // Fake Crash
+function fakeCrash()
+    Frame.Visible = false
+    for i = 1, 100 do
+        task.spawn(function()
+            while true do end
+        end)
+    end
+end
