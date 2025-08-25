@@ -1,1 +1,567 @@
-<!doctype html> <html lang="id"> <head> <meta charset="utf-8" /> <meta name="viewport" content="width=device-width,initial-scale=1" /> <title>Kasir Lokal — Tanpa Login (Full)</title> <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;600&display=swap" rel="stylesheet"> <style> :root{ --bg:#f5f8fb; --card:#ffffff; --muted:#6b7280; --primary:#2563eb; --accent:#06b6d4; --danger:#ef4444; } *{box-sizing:border-box;font-family:Roboto,system-ui,Arial;margin:0;padding:0} body{background:var(--bg);color:#0b1220;padding:18px} .wrap{max-width:1200px;margin:0 auto} header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px} h1{font-size:18px} .muted{color:var(--muted);font-size:13px} .card{background:var(--card);border-radius:10px;padding:12px;box-shadow:0 2px 8px rgba(5,10,25,0.04);margin-bottom:12px} nav{display:flex;gap:8px} button.btn{background:var(--primary);color:#fff;padding:8px 10px;border-radius:8px;border:0;cursor:pointer} button.ghost{background:transparent;border:1px solid rgba(37,99,235,0.12);color:var(--primary);padding:8px;border-radius:8px;cursor:pointer} .grid{display:grid;grid-template-columns:1fr 420px;gap:12px} .products{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px} .prod{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:8px;background:#fbfeff} input,select{padding:8px;border-radius:8px;border:1px solid #e6eefc} table{width:100%;border-collapse:collapse} th,td{padding:8px;text-align:left;border-bottom:1px dashed rgba(0,0,0,0.06)} .small{font-size:13px;color:var(--muted)} .hidden{display:none} /* modal */ .modal-bg{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:50} .modal{background:#fff;padding:12px;border-radius:8px;max-width:760px;width:100%;box-shadow:0 10px 40px rgba(2,6,23,0.12)} @media(max-width:980px){ .grid{grid-template-columns:1fr} .products{grid-template-columns:1fr} } </style> </head> <body> <div class="wrap"> <header> <div> <h1>Kasir Akbar</h1> <div class="muted">Offline - Gabut aku buatnya</div> </div> <nav> <button id="btnKasir" class="ghost">Kasir</button> <button id="btnLaporan" class="ghost">Laporan</button> <button id="btnExportData" class="ghost">Export JSON</button> <label class="ghost" style="padding:8px;border-radius:8px;cursor:pointer"><input id="importFile" type="file" accept="application/json" style="display:none">Import JSON</label> <button id="btnClearAll" class="ghost" title="Reset semua data">Reset</button> </nav> </header> <!-- KASIR VIEW --> <section id="viewKasir" class="card"> <div class="grid"> <div> <div style="display:flex;gap:8px;align-items:center"> <input id="searchProd" placeholder="Cari produk..." style="flex:1" /> <button id="clearSearch" class="ghost">Reset</button> </div> <div class="products card" id="productsList"></div> <div class="card" style="margin-top:10px"> <div style="display:flex;gap:8px"> <input id="newName" placeholder="Nama produk" /> <input id="newPrice" type="number" placeholder="Harga" /> <button id="addProduct" class="btn">Tambah</button> </div> <div style="display:flex;gap:8px;margin-top:8px"> <button id="exportCSV" class="ghost">Export Keranjang CSV</button> </div> </div> </div> <aside> <div class="card"> <h3>Keranjang</h3> <div style="max-height:320px;overflow:auto;margin-top:8px"> <table id="cartTable"><thead><tr><th>Produk</th><th>Qty</th><th>Harga</th><th>Sub</th><th></th></tr></thead><tbody></tbody></table> </div> <div style="margin-top:8px"> <div class="small">Subtotal <span id="subtotal">Rp0</span></div> <div class="small">Pajak (10%) <span id="tax">Rp0</span></div> <div style="margin-top:8px"> <label class="small">Jenis Diskon</label> <select id="discType"><option value="percent">Persen (%)</option><option value="fixed">Nominal (Rp)</option></select> <input id="discVal" type="number" placeholder="Masukkan diskon" style="margin-top:8px;display:block" /> </div> <div style="margin-top:8px;font-weight:700"><div>Total: <span id="total">Rp0</span></div></div> <div style="margin-top:8px"> <input id="paid" type="number" placeholder="Bayar (tunai)" /> <div style="display:flex;gap:8px;margin-top:8px"> <button id="payPrint" class="btn">Bayar & Cetak</button> <button id="savePDF" class="ghost">Simpan PDF</button> <button id="clearCart" class="ghost">Kosongkan</button> </div> </div> <div id="changeWrap" style="display:none;margin-top:8px"><div class="small">Kembalian: <b id="change">Rp0</b></div></div> <div id="receipt" style="margin-top:8px;font-family:monospace;white-space:pre-wrap"></div> </div> </div> </aside> </div> </section> <!-- LAPORAN VIEW --> <section id="viewLaporan" class="card hidden"> <h3>Laporan Penjualan</h3> <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"> <input id="rFrom" type="date" /> <input id="rTo" type="date" /> <input id="rSearch" placeholder="Cari ID/produk/user..." style="flex:1" /> <button id="genReport" class="btn">Generate</button> <button id="printReport" class="ghost">Cetak</button> <button id="expReportCSV" class="ghost">Export CSV</button> <button id="expReportPDF" class="ghost">Export PDF</button> </div> <div class="card"> <div style="display:flex;gap:8px;flex-wrap:wrap"> <div style="flex:1"> <div class="small">Total Transaksi</div><div id="sumTx" style="font-weight:700">0</div> </div> <div style="flex:1"> <div class="small">Item Terjual</div><div id="sumItems" style="font-weight:700">0</div> </div> <div style="flex:1"> <div class="small">Omzet</div><div id="sumOmzet" style="font-weight:700">Rp0</div> </div> <div style="flex:1"> <div class="small">Total Diskon</div><div id="sumDisc" style="font-weight:700">Rp0</div> </div> </div> </div> <div style="margin-top:10px" class="card"> <h4>Transaksi (klik detail untuk melihat item)</h4> <div id="transArea" style="max-height:260px;overflow:auto"></div> </div> <div style="margin-top:10px" class="card"> <h4>Rekap Per-Produk</h4> <div id="prodArea" style="max-height:200px;overflow:auto"></div> </div> <div style="margin-top:10px" class="card"> <h4>Grafik</h4> <div style="display:flex;gap:12px;align-items:flex-start"> <canvas id="barChart" width="420" height="200"></canvas> <canvas id="pieChart" width="200" height="200"></canvas> </div> <div style="margin-top:8px"> <button id="genCharts" class="btn">Tampilkan Grafik</button> <button id="downloadCharts" class="ghost">Download PNG</button> </div> </div> </section> <!-- modal detail transaksi --> <div id="modal" class="hidden"> <div class="modal-bg"> <div class="modal"> <h3>Detail Transaksi</h3> <div id="modalBody"></div> <div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end"> <button id="modalVoid" class="ghost">Void</button> <button id="modalClose" class="btn">Tutup</button> </div> </div> </div> </div> <footer class="muted" style="margin-top:12px">© By M.Rizqi Akbar</footer> </div> <!-- libs --> <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script> <!-- Chart.js will be lazy-loaded when needed --> <script> /* ----------------- STORAGE KEYS & DEFAULTS ----------------- */ const PRODUCTS_KEY = 'kf_products_v1' const CART_KEY = 'kf_cart_v1' const TX_KEY = 'kf_tx_v1' let products = JSON.parse(localStorage.getItem(PRODUCTS_KEY)) || [ {id:1,name:'Nasi Ayam Goreng',price:18000}, {id:2,name:'Air Mineral 600ml',price:5000}, {id:3,name:'Kopi Susu',price:12000}, ] let cart = JSON.parse(localStorage.getItem(CART_KEY)) || {} let transactions = JSON.parse(localStorage.getItem(TX_KEY)) || [] function saveAll(){ localStorage.setItem(PRODUCTS_KEY, JSON.stringify(products)); localStorage.setItem(CART_KEY, JSON.stringify(cart)); localStorage.setItem(TX_KEY, JSON.stringify(transactions)); } /* ----------------- NAV & VIEWS ----------------- */ const viewKasir = document.getElementById('viewKasir') const viewLaporan = document.getElementById('viewLaporan') document.getElementById('btnKasir').addEventListener('click', ()=>{ viewKasir.classList.remove('hidden'); viewLaporan.classList.add('hidden') }) document.getElementById('btnLaporan').addEventListener('click', ()=>{ viewLaporan.classList.remove('hidden'); viewKasir.classList.add('hidden'); renderReport(); }) // export/import document.getElementById('btnExportData').addEventListener('click', exportDataJSON) document.getElementById('importFile').addEventListener('change', importDataJSON) document.getElementById('btnClearAll').addEventListener('click', ()=>{ if(confirm('Reset semua data?')){ localStorage.removeItem(PRODUCTS_KEY); localStorage.removeItem(CART_KEY); localStorage.removeItem(TX_KEY); location.reload() } }) /* ----------------- PRODUCTS UI ----------------- */ const productsList = document.getElementById('productsList') function renderProducts(filter=''){ productsList.innerHTML = '' const q = (filter||'').toLowerCase() products.filter(p=>p.name.toLowerCase().includes(q)).forEach(p=>{ const el = document.createElement('div'); el.className='prod' el.innerHTML = <div style="display:flex;align-items:center;gap:8px"> <div style="width:44px;height:44px;border-radius:8px;background:#eef7ff;display:flex;align-items:center;justify-content:center;font-weight:600;color:var(--primary)">${p.id}</div> <div><div style="font-weight:600">${p.name}</div><div class="muted">${formatRupiah(p.price)}</div></div> </div> <div style="display:flex;gap:8px"> <button class="btn addBtn" data-id="${p.id}">Tambah</button> <button class="ghost editBtn" data-id="${p.id}">Edit</button> <button class="ghost delBtn" data-id="${p.id}">Hapus</button> </div> productsList.appendChild(el) }) } document.getElementById('searchProd').addEventListener('input', e=>renderProducts(e.target.value)) document.getElementById('clearSearch').addEventListener('click', ()=>{ document.getElementById('searchProd').value=''; renderProducts() }) // add product document.getElementById('addProduct').addEventListener('click', ()=>{ const name = document.getElementById('newName').value.trim() const price = Number(document.getElementById('newPrice').value) if(!name||!price) return alert('Isi nama & harga') const id = products.length? Math.max(...products.map(p=>p.id))+1 : 1 products.push({id,name,price}); saveAll(); renderProducts(); document.getElementById('newName').value=''; document.getElementById('newPrice').value=''; alert('Produk ditambahkan') }) // product actions (add to cart, edit, delete) document.addEventListener('click', e=>{ if(e.target.matches('.addBtn')){ addToCart(Number(e.target.dataset.id),1) } else if(e.target.matches('.editBtn')){ const id=Number(e.target.dataset.id); const p = products.find(x=>x.id===id) const name = prompt('Nama produk', p.name); const price = Number(prompt('Harga', p.price)) if(name && price){ p.name=name; p.price=price; saveAll(); renderProducts(); alert('Diubah') } } else if(e.target.matches('.delBtn')){ const id=Number(e.target.dataset.id) if(confirm('Hapus produk?')){ products = products.filter(x=>x.id!=id); saveAll(); renderProducts(); alert('Dihapus') } } }) /* ----------------- CART ----------------- */ function addToCart(id, qty=1){ const p = products.find(x=>x.id===id); if(!p) return if(cart[id]) cart[id].qty += qty else cart[id] = {id:p.id,name:p.name,price:p.price,qty} saveAll(); renderCart() } function renderCart(){ const tbody = document.querySelector('#cartTable tbody'); tbody.innerHTML='' Object.values(cart).forEach(it=>{ const tr = document.createElement('tr') tr.innerHTML = <td>${it.name}</td> <td><input data-id="${it.id}" type="number" min="1" value="${it.qty}" style="width:70px"></td> <td>${formatRupiah(it.price)}</td> <td>${formatRupiah(it.price*it.qty)}</td> <td><button class="ghost rem" data-id="${it.id}">Hapus</button></td> tbody.appendChild(tr) }) document.querySelectorAll('#cartTable tbody input[type=number]').forEach(inp=>inp.addEventListener('change', e=>{ const id=e.target.dataset.id; cart[id].qty = Math.max(1, Number(e.target.value)||1); saveAll(); renderCart() })) updateTotals() } document.addEventListener('click', e=>{ if(e.target.matches('.rem')){ delete cart[e.target.dataset.id]; saveAll(); renderCart() } }) /* ----------------- TOTALS & CHECKOUT ----------------- */ function updateTotals(){ const subtotal = Object.values(cart).reduce((s,i)=>s + i.price*i.qty,0) const tax = Math.round(subtotal*0.10) const dt = document.getElementById('discType').value const dv = Number(document.getElementById('discVal').value || 0) let discount = 0 if(dt==='percent') discount = Math.round(subtotal*(dv/100)) else discount = Math.round(dv) const total = Math.max(0, subtotal + tax - discount) document.getElementById('subtotal').textContent = formatRupiah(subtotal) document.getElementById('tax').textContent = formatRupiah(tax) document.getElementById('total').textContent = formatRupiah(total) saveAll() } document.getElementById('discVal').addEventListener('input', updateTotals) document.getElementById('discType').addEventListener('change', updateTotals) document.getElementById('payPrint').addEventListener('click', ()=>{ const items = Object.values(cart) if(items.length===0) return alert('Keranjang kosong') const subtotal = items.reduce((s,i)=>s + i.price*i.qty,0) const tax = Math.round(subtotal*0.10) const dt = document.getElementById('discType').value const dv = Number(document.getElementById('discVal').value || 0) const discount = dt==='percent'? Math.round(subtotal*(dv/100)) : Math.round(dv) const total = Math.max(0, subtotal + tax - discount) const paid = Number(document.getElementById('paid').value || 0) if(paid < total && !confirm('Bayar kurang. Lanjutkan?')) return const change = Math.max(0, paid - total) const tx = { id: Date.now(), date: new Date().toISOString(), items, subtotal, tax, discount, total, paid, change, status:'normal' } transactions.push(tx); saveAll() // print small receipt const lines = [] lines.push('=== STRUK PEMBELIAN ===') lines.push('Tanggal: ' + new Date().toLocaleString()) lines.push('') items.forEach(i=> lines.push(${i.name} x${i.qty} ${formatRupiah(i.price*i.qty)})) lines.push('') lines.push('Subtotal: ' + formatRupiah(subtotal)) lines.push('Pajak: ' + formatRupiah(tax)) lines.push('Diskon: ' + formatRupiah(discount)) lines.push('TOTAL: ' + formatRupiah(total)) lines.push('Dibayar: ' + formatRupiah(paid)) lines.push('Kembali: ' + formatRupiah(change)) lines.push('=======================') document.getElementById('receipt').textContent = lines.join('\n') const w = window.open('', '_blank'); w.document.write('<pre style="font-family:monospace">'+lines.join('\n')+'</pre>'); w.document.close(); w.print() cart = {}; saveAll(); renderCart(); document.getElementById('paid').value=''; document.getElementById('discVal').value=''; updateTotals() alert('Transaksi tersimpan') }) // Save PDF (full struk) document.getElementById('savePDF').addEventListener('click', ()=>{ const items = Object.values(cart); if(items.length===0) return alert('Keranjang kosong') const { jsPDF } = window.jspdf; const doc = new jsPDF({unit:'pt', format:'a4'}); doc.setFontSize(11) let y = 40; doc.text('Struk Pembayaran',40,y); y+=18 items.forEach(i=>{ doc.text(${i.name} x${i.qty} - ${formatRupiah(i.price*i.qty)},40,y); y+=14 }) doc.save('struk.pdf') }) // export cart CSV document.getElementById('exportCSV').addEventListener('click', ()=>{ if(Object.keys(cart).length===0) return alert('Keranjang kosong') let csv = 'Produk,Qty,Harga,Subtotal\n' Object.values(cart).forEach(i=> csv += ${i.name},${i.qty},${i.price},${i.qty*i.price}\n) downloadBlob(csv,'keranjang.csv','text/csv') }) /* ----------------- REPORTS ----------------- */ function renderReport(){ const from = document.getElementById('rFrom').value const to = document.getElementById('rTo').value const q = (document.getElementById('rSearch').value || '').toLowerCase() const fromT = from ? new Date(from).setHours(0,0,0,0) : -Infinity const toT = to ? new Date(to).setHours(23,59,59,999) : Infinity const list = transactions.filter(tx=>{ const t = new Date(tx.date).getTime() if(t < fromT || t > toT) return false if(!q) return true // search in id, items, status if(String(tx.id).includes(q)) return true if(tx.status && tx.status.toLowerCase().includes(q)) return true if(tx.items.some(it=>it.name.toLowerCase().includes(q))) return true return false }) // summary const active = list.filter(x=>x.status!=='voided') const sumTx = active.length const sumItems = active.reduce((s,tx)=> s + tx.items.reduce((a,i)=>a+i.qty,0), 0) const sumOmzet = active.reduce((s,tx)=>s + tx.total,0) const sumDisc = active.reduce((s,tx)=>s + (tx.discount||0),0) document.getElementById('sumTx').innerText = sumTx document.getElementById('sumItems').innerText = sumItems document.getElementById('sumOmzet').innerText = formatRupiah(sumOmzet) document.getElementById('sumDisc').innerText = formatRupiah(sumDisc) // transactions table const transArea = document.getElementById('transArea'); transArea.innerHTML = '' const tbl = document.createElement('table') tbl.innerHTML = '<thead><tr><th>ID</th><th>Tanggal</th><th>User Items</th><th>Total</th><th>Diskon</th><th>Status</th><th>Aksi</th></tr></thead>' const tb = document.createElement('tbody') list.slice().reverse().forEach(tx=>{ const tr = document.createElement('tr') tr.innerHTML = <td>${tx.id}</td> <td>${new Date(tx.date).toLocaleString()}</td> <td>${tx.items.map(i=>i.name+'('+i.qty+')').join(', ')}</td> <td>${formatRupiah(tx.total)}</td> <td>${formatRupiah(tx.discount||0)}</td> <td style="color:${tx.status==='voided'? 'var(--danger)':'inherit'}">${tx.status||'normal'}</td> <td><button class="ghost viewTx" data-id="${tx.id}">Detail</button> <button class="ghost ${tx.status==='voided'?'restoreTx':'voidTx'}" data-id="${tx.id}">${tx.status==='voided'?'Restore':'Void'}</button></td> tb.appendChild(tr) }) tbl.appendChild(tb); transArea.appendChild(tbl) // rekap per-produk const prodAgg = {} transactions.forEach(tx=>{ if(tx.status==='voided') return const t = new Date(tx.date).getTime() if(t < fromT || t > toT) return tx.items.forEach(it=>{ if(!prodAgg[it.id]) prodAgg[it.id] = {name:it.name, qty:0, revenue:0} prodAgg[it.id].qty += it.qty prodAgg[it.id].revenue += it.qty * it.price }) }) const prodArea = document.getElementById('prodArea'); prodArea.innerHTML = '' const ptable = document.createElement('table'); const pbody = document.createElement('tbody') ptable.innerHTML = '<thead><tr><th>Produk</th><th>Qty</th><th>Revenue</th></tr></thead>' Object.values(prodAgg).sort((a,b)=>b.qty-a.qty).forEach(p=>{ const r = document.createElement('tr'); r.innerHTML = <td>${p.name}</td><td>${p.qty}</td><td>${formatRupiah(p.revenue)}</td>; pbody.appendChild(r) }) ptable.appendChild(pbody); prodArea.appendChild(ptable) } /* action handlers: view detail, void, restore */ document.addEventListener('click', e=>{ if(e.target.matches('.viewTx')){ const id = Number(e.target.dataset.id); const tx = transactions.find(t=>t.id===id) if(!tx) return showModal(tx) } else if(e.target.matches('.voidTx')){ const id = Number(e.target.dataset.id); if(!confirm('Void transaksi ini?')) return const tx = transactions.find(t=>t.id===id); if(tx){ tx.status='voided'; saveAll(); renderReport(); alert('Transaksi di-void') } } else if(e.target.matches('.restoreTx')){ const id = Number(e.target.dataset.id); if(!confirm('Restore transaksi ini?')) return const tx = transactions.find(t=>t.id===id); if(tx){ tx.status='normal'; saveAll(); renderReport(); alert('Transaksi direstore') } } }) /* modal functions */ const modal = document.getElementById('modal'); const modalBody = document.getElementById('modalBody') function showModal(tx){ modal.classList.remove('hidden'); modal.innerHTML = <div class="modal-bg"><div class="modal"> <h3>Detail Transaksi #${tx.id}</h3> <div><b>Tanggal:</b> ${new Date(tx.date).toLocaleString()}</div> <div style="margin-top:8px">${tx.items.map(i=><div>${i.name} x${i.qty} — ${formatRupiah(i.price*i.qty)}</div>).join('')}</div> <div style="margin-top:8px"><b>Subtotal:</b> ${formatRupiah(tx.subtotal)}</div> <div><b>Pajak:</b> ${formatRupiah(tx.tax)}</div> <div><b>Diskon:</b> ${formatRupiah(tx.discount||0)}</div> <div><b>Total:</b> ${formatRupiah(tx.total)}</div> <div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end"> <button id="modalClose" class="btn">Tutup</button> <button id="modalVoidBtn" class="ghost">${tx.status==='voided' ? 'Restore' : 'Void'}</button> </div> </div></div> // handlers inside modal document.getElementById('modalClose').addEventListener('click', ()=>{ modal.classList.add('hidden'); modal.innerHTML='' }) document.getElementById('modalVoidBtn').addEventListener('click', ()=>{ if(tx.status==='voided'){ tx.status='normal' } else { if(!confirm('Void transaksi ini?')) return; tx.status='voided' } saveAll(); renderReport(); modal.classList.add('hidden'); modal.innerHTML=''; alert('Status diubah') }) } /* ----------------- CHARTS (lazy load Chart.js) ----------------- */ let chartsLoaded=false, barChart=null, pieChart=null document.getElementById('genCharts').addEventListener('click', ()=>{ if(!chartsLoaded){ loadChartLib().then(renderCharts) } else renderCharts() }) document.getElementById('downloadCharts').addEventListener('click', ()=>{ // combine canvases into images for download (simple) if(!barChart && !pieChart) return alert('Buat grafik dulu') const barCanvas = document.getElementById('barChart'), pieCanvas = document.getElementById('pieChart') const link = document.createElement('a'); link.href = barCanvas.toDataURL('image/png'); link.download='bar.png'; link.click() }) async function loadChartLib(){ if(chartsLoaded) return chartsLoaded = true return new Promise((res,rej)=>{ const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js' s.onload = ()=> res(); s.onerror = ()=> rej('Chart load failed'); document.head.appendChild(s) }) } function renderCharts(){ const from = document.getElementById('rFrom').value const to = document.getElementById('rTo').value const fromT = from ? new Date(from).setHours(0,0,0,0) : -Infinity const toT = to ? new Date(to).setHours(23,59,59,999) : Infinity const agg = {} transactions.forEach(tx=>{ if(tx.status==='voided') return const t = new Date(tx.date).getTime(); if(t < fromT || t > toT) return tx.items.forEach(it=>{ if(!agg[it.id]) agg[it.id] = {name:it.name, qty:0, rev:0} agg[it.id].qty += it.qty; agg[it.id].rev += it.qty*it.price }) }) const labels = Object.values(agg).map(x=>x.name) const qtyData = Object.values(agg).map(x=>x.qty) const revData = Object.values(agg).map(x=>x.rev) // bar const barCtx = document.getElementById('barChart').getContext('2d') if(barChart) barChart.destroy() barChart = new Chart(barCtx, {type:'bar', data:{labels, datasets:[{label:'Qty terjual', data:qtyData, backgroundColor:'rgba(37,99,235,0.7)'}]}, options:{plugins:{legend:{display:false}}}}) // pie const pieCtx = document.getElementById('pieChart').getContext('2d') if(pieChart) pieChart.destroy() pieChart = new Chart(pieCtx, {type:'pie', data:{labels, datasets:[{label:'Revenue', data:revData, backgroundColor: labels.map((_,i)=>['#60a5fa','#06b6d4','#34d399','#f59e0b','#f97316'][i%5])}]}, options:{}}) } /* ----------------- EXPORT / IMPORT / HELPERS ----------------- */ function exportDataJSON(){ const data = {products, transactions} downloadBlob(JSON.stringify(data,null,2),'kasir_backup.json','application/json') } function importDataJSON(e){ const f = e.target.files[0]; if(!f) return const r = new FileReader(); r.onload = ev=>{ try{ const d = JSON.parse(ev.target.result) if(d.products) products = d.products if(d.transactions) transactions = d.transactions saveAll(); renderProducts(); renderCart(); alert('Import sukses') }catch(err){ alert('File tidak valid') } }; r.readAsText(f); e.target.value='' } function exportReportCSV(){ const from = document.getElementById('rFrom').value const to = document.getElementById('rTo').value const fromT = from ? new Date(from).setHours(0,0,0,0) : -Infinity const toT = to ? new Date(to).setHours(23,59,59,999) : Infinity const list = transactions.filter(tx=>{ const t = new Date(tx.date).getTime(); if(t<fromT||t>toT) return false; return true }) if(list.length===0) return alert('Tidak ada data') let csv = 'id,tanggal,total,diskon,status\n' list.forEach(tx=> csv += ${tx.id},"${new Date(tx.date).toLocaleString()}",${tx.total},${tx.discount||0},${tx.status||'normal'}\n) downloadBlob(csv,'laporan.csv','text/csv') } document.getElementById('expReportCSV').addEventListener('click', exportReportCSV) document.getElementById('expReportPDF').addEventListener('click', ()=>{ const from = document.getElementById('rFrom').value const to = document.getElementById('rTo').value const fromT = from ? new Date(from).setHours(0,0,0,0) : -Infinity const toT = to ? new Date(to).setHours(23,59,59,999) : Infinity const list = transactions.filter(tx=>{ const t=new Date(tx.date).getTime(); if(t<fromT||t>toT) return false; return true }) if(list.length===0) return alert('Tidak ada data') const { jsPDF } = window.jspdf; const doc = new jsPDF(); let y=20; doc.text('Laporan Transaksi',20,y); y+=10 list.forEach(tx=>{ doc.text(${new Date(tx.date).toLocaleString()} | ${formatRupiah(tx.total)} | ${tx.status||'normal'},20,y); y+=8 }) doc.save('laporan.pdf') }) function downloadBlob(content, filename, mime){ const blob = new Blob([content], {type: mime}) const url = URL.createObjectURL(blob) const a = document.createElement('a'); a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url) } /* helper */ function formatRupiah(n){ return 'Rp' + Number(n).toLocaleString('id-ID') } /* ----------------- INITIALIZE ----------------- */ renderProducts(); renderCart(); /* render report when button generate clicked */ document.getElementById('genReport').addEventListener('click', ()=>{ renderReport(); if(!chartsLoaded) loadChartLib(); }) /* print report */ document.getElementById('printReport').addEventListener('click', ()=>{ window.print() }) </script> </body> </html>
+
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Kasir Lokal — Tanpa Login (Full)</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f5f8fb; --card:#ffffff; --muted:#6b7280; --primary:#2563eb; --accent:#06b6d4; --danger:#ef4444;
+  }
+  *{box-sizing:border-box;font-family:Roboto,system-ui,Arial;margin:0;padding:0}
+  body{background:var(--bg);color:#0b1220;padding:18px}
+  .wrap{max-width:1200px;margin:0 auto}
+  header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+  h1{font-size:18px}
+  .muted{color:var(--muted);font-size:13px}
+  .card{background:var(--card);border-radius:10px;padding:12px;box-shadow:0 2px 8px rgba(5,10,25,0.04);margin-bottom:12px}
+  nav{display:flex;gap:8px}
+  button.btn{background:var(--primary);color:#fff;padding:8px 10px;border-radius:8px;border:0;cursor:pointer}
+  button.ghost{background:transparent;border:1px solid rgba(37,99,235,0.12);color:var(--primary);padding:8px;border-radius:8px;cursor:pointer}
+  .grid{display:grid;grid-template-columns:1fr 420px;gap:12px}
+  .products{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px}
+  .prod{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:8px;background:#fbfeff}
+  input,select{padding:8px;border-radius:8px;border:1px solid #e6eefc}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:8px;text-align:left;border-bottom:1px dashed rgba(0,0,0,0.06)}
+  .small{font-size:13px;color:var(--muted)}
+  .hidden{display:none}
+  /* modal */
+  .modal-bg{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:50}
+  .modal{background:#fff;padding:12px;border-radius:8px;max-width:760px;width:100%;box-shadow:0 10px 40px rgba(2,6,23,0.12)}
+  @media(max-width:980px){ .grid{grid-template-columns:1fr} .products{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Kasir Akbar</h1>
+      <div class="muted">Offline - Gabut aku buatnya</div>
+    </div>
+    <nav>
+      <button id="btnKasir" class="ghost">Kasir</button>
+      <button id="btnLaporan" class="ghost">Laporan</button>
+      <button id="btnExportData" class="ghost">Export JSON</button>
+      <label class="ghost" style="padding:8px;border-radius:8px;cursor:pointer"><input id="importFile" type="file" accept="application/json" style="display:none">Import JSON</label>
+      <button id="btnClearAll" class="ghost" title="Reset semua data">Reset</button>
+    </nav>
+  </header>
+
+  <!-- KASIR VIEW -->
+  <section id="viewKasir" class="card">
+    <div class="grid">
+      <div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="searchProd" placeholder="Cari produk..." style="flex:1" />
+          <button id="clearSearch" class="ghost">Reset</button>
+        </div>
+
+        <div class="products card" id="productsList"></div>
+
+        <div class="card" style="margin-top:10px">
+          <div style="display:flex;gap:8px">
+            <input id="newName" placeholder="Nama produk" />
+            <input id="newPrice" type="number" placeholder="Harga" />
+            <button id="addProduct" class="btn">Tambah</button>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button id="exportCSV" class="ghost">Export Keranjang CSV</button>
+          </div>
+        </div>
+      </div>
+
+      <aside>
+        <div class="card">
+          <h3>Keranjang</h3>
+          <div style="max-height:320px;overflow:auto;margin-top:8px">
+            <table id="cartTable"><thead><tr><th>Produk</th><th>Qty</th><th>Harga</th><th>Sub</th><th></th></tr></thead><tbody></tbody></table>
+          </div>
+
+          <div style="margin-top:8px">
+            <div class="small">Subtotal <span id="subtotal">Rp0</span></div>
+            <div class="small">Pajak (10%) <span id="tax">Rp0</span></div>
+            <div style="margin-top:8px">
+              <label class="small">Jenis Diskon</label>
+              <select id="discType"><option value="percent">Persen (%)</option><option value="fixed">Nominal (Rp)</option></select>
+              <input id="discVal" type="number" placeholder="Masukkan diskon" style="margin-top:8px;display:block" />
+            </div>
+            <div style="margin-top:8px;font-weight:700"><div>Total: <span id="total">Rp0</span></div></div>
+
+            <div style="margin-top:8px">
+              <input id="paid" type="number" placeholder="Bayar (tunai)" />
+              <div style="display:flex;gap:8px;margin-top:8px">
+                <button id="payPrint" class="btn">Bayar & Cetak</button>
+                <button id="savePDF" class="ghost">Simpan PDF</button>
+                <button id="clearCart" class="ghost">Kosongkan</button>
+              </div>
+            </div>
+
+            <div id="changeWrap" style="display:none;margin-top:8px"><div class="small">Kembalian: <b id="change">Rp0</b></div></div>
+            <div id="receipt" style="margin-top:8px;font-family:monospace;white-space:pre-wrap"></div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- LAPORAN VIEW -->
+  <section id="viewLaporan" class="card hidden">
+    <h3>Laporan Penjualan</h3>
+
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+      <input id="rFrom" type="date" />
+      <input id="rTo" type="date" />
+      <input id="rSearch" placeholder="Cari ID/produk/user..." style="flex:1" />
+      <button id="genReport" class="btn">Generate</button>
+      <button id="printReport" class="ghost">Cetak</button>
+      <button id="expReportCSV" class="ghost">Export CSV</button>
+      <button id="expReportPDF" class="ghost">Export PDF</button>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div style="flex:1">
+          <div class="small">Total Transaksi</div><div id="sumTx" style="font-weight:700">0</div>
+        </div>
+        <div style="flex:1">
+          <div class="small">Item Terjual</div><div id="sumItems" style="font-weight:700">0</div>
+        </div>
+        <div style="flex:1">
+          <div class="small">Omzet</div><div id="sumOmzet" style="font-weight:700">Rp0</div>
+        </div>
+        <div style="flex:1">
+          <div class="small">Total Diskon</div><div id="sumDisc" style="font-weight:700">Rp0</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:10px" class="card">
+      <h4>Transaksi (klik detail untuk melihat item)</h4>
+      <div id="transArea" style="max-height:260px;overflow:auto"></div>
+    </div>
+
+    <div style="margin-top:10px" class="card">
+      <h4>Rekap Per-Produk</h4>
+      <div id="prodArea" style="max-height:200px;overflow:auto"></div>
+    </div>
+
+    <div style="margin-top:10px" class="card">
+      <h4>Grafik</h4>
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <canvas id="barChart" width="420" height="200"></canvas>
+        <canvas id="pieChart" width="200" height="200"></canvas>
+      </div>
+      <div style="margin-top:8px">
+        <button id="genCharts" class="btn">Tampilkan Grafik</button>
+        <button id="downloadCharts" class="ghost">Download PNG</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- modal detail transaksi -->
+  <div id="modal" class="hidden">
+    <div class="modal-bg">
+      <div class="modal">
+        <h3>Detail Transaksi</h3>
+        <div id="modalBody"></div>
+        <div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end">
+          <button id="modalVoid" class="ghost">Void</button>
+          <button id="modalClose" class="btn">Tutup</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="muted" style="margin-top:12px">© By M.Rizqi Akbar</footer>
+</div>
+
+<!-- libs -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<!-- Chart.js will be lazy-loaded when needed -->
+
+<script>
+/* ----------------- STORAGE KEYS & DEFAULTS ----------------- */
+const PRODUCTS_KEY = 'kf_products_v1'
+const CART_KEY = 'kf_cart_v1'
+const TX_KEY = 'kf_tx_v1'
+
+let products = JSON.parse(localStorage.getItem(PRODUCTS_KEY)) || [
+  {id:1,name:'Nasi Ayam Goreng',price:18000},
+  {id:2,name:'Air Mineral 600ml',price:5000},
+  {id:3,name:'Kopi Susu',price:12000},
+]
+let cart = JSON.parse(localStorage.getItem(CART_KEY)) || {}
+let transactions = JSON.parse(localStorage.getItem(TX_KEY)) || []
+
+function saveAll(){ localStorage.setItem(PRODUCTS_KEY, JSON.stringify(products)); localStorage.setItem(CART_KEY, JSON.stringify(cart)); localStorage.setItem(TX_KEY, JSON.stringify(transactions)); }
+
+/* ----------------- NAV & VIEWS ----------------- */
+const viewKasir = document.getElementById('viewKasir')
+const viewLaporan = document.getElementById('viewLaporan')
+document.getElementById('btnKasir').addEventListener('click', ()=>{ viewKasir.classList.remove('hidden'); viewLaporan.classList.add('hidden') })
+document.getElementById('btnLaporan').addEventListener('click', ()=>{ viewLaporan.classList.remove('hidden'); viewKasir.classList.add('hidden'); renderReport(); })
+// export/import
+document.getElementById('btnExportData').addEventListener('click', exportDataJSON)
+document.getElementById('importFile').addEventListener('change', importDataJSON)
+document.getElementById('btnClearAll').addEventListener('click', ()=>{ if(confirm('Reset semua data?')){ localStorage.removeItem(PRODUCTS_KEY); localStorage.removeItem(CART_KEY); localStorage.removeItem(TX_KEY); location.reload() } })
+
+/* ----------------- PRODUCTS UI ----------------- */
+const productsList = document.getElementById('productsList')
+function renderProducts(filter=''){
+  productsList.innerHTML = ''
+  const q = (filter||'').toLowerCase()
+  products.filter(p=>p.name.toLowerCase().includes(q)).forEach(p=>{
+    const el = document.createElement('div'); el.className='prod'
+    el.innerHTML = `<div style="display:flex;align-items:center;gap:8px">
+        <div style="width:44px;height:44px;border-radius:8px;background:#eef7ff;display:flex;align-items:center;justify-content:center;font-weight:600;color:var(--primary)">${p.id}</div>
+        <div><div style="font-weight:600">${p.name}</div><div class="muted">${formatRupiah(p.price)}</div></div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn addBtn" data-id="${p.id}">Tambah</button>
+        <button class="ghost editBtn" data-id="${p.id}">Edit</button>
+        <button class="ghost delBtn" data-id="${p.id}">Hapus</button>
+      </div>`
+    productsList.appendChild(el)
+  })
+}
+document.getElementById('searchProd').addEventListener('input', e=>renderProducts(e.target.value))
+document.getElementById('clearSearch').addEventListener('click', ()=>{ document.getElementById('searchProd').value=''; renderProducts() })
+
+// add product
+document.getElementById('addProduct').addEventListener('click', ()=>{
+  const name = document.getElementById('newName').value.trim()
+  const price = Number(document.getElementById('newPrice').value)
+  if(!name||!price) return alert('Isi nama & harga')
+  const id = products.length? Math.max(...products.map(p=>p.id))+1 : 1
+  products.push({id,name,price}); saveAll(); renderProducts(); document.getElementById('newName').value=''; document.getElementById('newPrice').value=''; alert('Produk ditambahkan')
+})
+
+// product actions (add to cart, edit, delete)
+document.addEventListener('click', e=>{
+  if(e.target.matches('.addBtn')){
+    addToCart(Number(e.target.dataset.id),1)
+  } else if(e.target.matches('.editBtn')){
+    const id=Number(e.target.dataset.id); const p = products.find(x=>x.id===id)
+    const name = prompt('Nama produk', p.name); const price = Number(prompt('Harga', p.price))
+    if(name && price){ p.name=name; p.price=price; saveAll(); renderProducts(); alert('Diubah') }
+  } else if(e.target.matches('.delBtn')){
+    const id=Number(e.target.dataset.id)
+    if(confirm('Hapus produk?')){ products = products.filter(x=>x.id!=id); saveAll(); renderProducts(); alert('Dihapus') }
+  }
+})
+
+/* ----------------- CART ----------------- */
+function addToCart(id, qty=1){
+  const p = products.find(x=>x.id===id); if(!p) return
+  if(cart[id]) cart[id].qty += qty
+  else cart[id] = {id:p.id,name:p.name,price:p.price,qty}
+  saveAll(); renderCart()
+}
+function renderCart(){
+  const tbody = document.querySelector('#cartTable tbody'); tbody.innerHTML=''
+  Object.values(cart).forEach(it=>{
+    const tr = document.createElement('tr')
+    tr.innerHTML = `<td>${it.name}</td>
+      <td><input data-id="${it.id}" type="number" min="1" value="${it.qty}" style="width:70px"></td>
+      <td>${formatRupiah(it.price)}</td>
+      <td>${formatRupiah(it.price*it.qty)}</td>
+      <td><button class="ghost rem" data-id="${it.id}">Hapus</button></td>`
+    tbody.appendChild(tr)
+  })
+  document.querySelectorAll('#cartTable tbody input[type=number]').forEach(inp=>inp.addEventListener('change', e=>{
+    const id=e.target.dataset.id; cart[id].qty = Math.max(1, Number(e.target.value)||1); saveAll(); renderCart()
+  }))
+  updateTotals()
+}
+document.addEventListener('click', e=>{ if(e.target.matches('.rem')){ delete cart[e.target.dataset.id]; saveAll(); renderCart() } })
+
+/* ----------------- TOTALS & CHECKOUT ----------------- */
+function updateTotals(){
+  const subtotal = Object.values(cart).reduce((s,i)=>s + i.price*i.qty,0)
+  const tax = Math.round(subtotal*0.10)
+  const dt = document.getElementById('discType').value
+  const dv = Number(document.getElementById('discVal').value || 0)
+  let discount = 0
+  if(dt==='percent') discount = Math.round(subtotal*(dv/100))
+  else discount = Math.round(dv)
+  const total = Math.max(0, subtotal + tax - discount)
+  document.getElementById('subtotal').textContent = formatRupiah(subtotal)
+  document.getElementById('tax').textContent = formatRupiah(tax)
+  document.getElementById('total').textContent = formatRupiah(total)
+  saveAll()
+}
+document.getElementById('discVal').addEventListener('input', updateTotals)
+document.getElementById('discType').addEventListener('change', updateTotals)
+
+document.getElementById('payPrint').addEventListener('click', ()=>{
+  const items = Object.values(cart)
+  if(items.length===0) return alert('Keranjang kosong')
+  const subtotal = items.reduce((s,i)=>s + i.price*i.qty,0)
+  const tax = Math.round(subtotal*0.10)
+  const dt = document.getElementById('discType').value
+  const dv = Number(document.getElementById('discVal').value || 0)
+  const discount = dt==='percent'? Math.round(subtotal*(dv/100)) : Math.round(dv)
+  const total = Math.max(0, subtotal + tax - discount)
+  const paid = Number(document.getElementById('paid').value || 0)
+  if(paid < total && !confirm('Bayar kurang. Lanjutkan?')) return
+  const change = Math.max(0, paid - total)
+  const tx = { id: Date.now(), date: new Date().toISOString(), items, subtotal, tax, discount, total, paid, change, status:'normal' }
+  transactions.push(tx); saveAll()
+  // print small receipt
+  const lines = []
+  lines.push('=== STRUK PEMBELIAN ===')
+  lines.push('Tanggal: ' + new Date().toLocaleString())
+  lines.push('')
+  items.forEach(i=> lines.push(`${i.name} x${i.qty}  ${formatRupiah(i.price*i.qty)}`))
+  lines.push('')
+  lines.push('Subtotal: ' + formatRupiah(subtotal))
+  lines.push('Pajak: ' + formatRupiah(tax))
+  lines.push('Diskon: ' + formatRupiah(discount))
+  lines.push('TOTAL: ' + formatRupiah(total))
+  lines.push('Dibayar: ' + formatRupiah(paid))
+  lines.push('Kembali: ' + formatRupiah(change))
+  lines.push('=======================')
+  document.getElementById('receipt').textContent = lines.join('\n')
+  const w = window.open('', '_blank'); w.document.write('<pre style="font-family:monospace">'+lines.join('\n')+'</pre>'); w.document.close(); w.print()
+  cart = {}; saveAll(); renderCart(); document.getElementById('paid').value=''; document.getElementById('discVal').value=''; updateTotals()
+  alert('Transaksi tersimpan')
+})
+
+// Save PDF (full struk)
+document.getElementById('savePDF').addEventListener('click', ()=>{
+  const items = Object.values(cart); if(items.length===0) return alert('Keranjang kosong')
+  const { jsPDF } = window.jspdf; const doc = new jsPDF({unit:'pt', format:'a4'}); doc.setFontSize(11)
+  let y = 40; doc.text('Struk Pembayaran',40,y); y+=18
+  items.forEach(i=>{ doc.text(`${i.name} x${i.qty} - ${formatRupiah(i.price*i.qty)}`,40,y); y+=14 })
+  doc.save('struk.pdf')
+})
+
+// export cart CSV
+document.getElementById('exportCSV').addEventListener('click', ()=>{
+  if(Object.keys(cart).length===0) return alert('Keranjang kosong')
+  let csv = 'Produk,Qty,Harga,Subtotal\n'
+  Object.values(cart).forEach(i=> csv += `${i.name},${i.qty},${i.price},${i.qty*i.price}\n`)
+  downloadBlob(csv,'keranjang.csv','text/csv')
+})
+
+/* ----------------- REPORTS ----------------- */
+function renderReport(){
+  const from = document.getElementById('rFrom').value
+  const to = document.getElementById('rTo').value
+  const q = (document.getElementById('rSearch').value || '').toLowerCase()
+  const fromT = from ? new Date(from).setHours(0,0,0,0) : -Infinity
+  const toT = to ? new Date(to).setHours(23,59,59,999) : Infinity
+
+  const list = transactions.filter(tx=>{
+    const t = new Date(tx.date).getTime()
+    if(t < fromT || t > toT) return false
+    if(!q) return true
+    // search in id, items, status
+    if(String(tx.id).includes(q)) return true
+    if(tx.status && tx.status.toLowerCase().includes(q)) return true
+    if(tx.items.some(it=>it.name.toLowerCase().includes(q))) return true
+    return false
+  })
+
+  // summary
+  const active = list.filter(x=>x.status!=='voided')
+  const sumTx = active.length
+  const sumItems = active.reduce((s,tx)=> s + tx.items.reduce((a,i)=>a+i.qty,0), 0)
+  const sumOmzet = active.reduce((s,tx)=>s + tx.total,0)
+  const sumDisc = active.reduce((s,tx)=>s + (tx.discount||0),0)
+  document.getElementById('sumTx').innerText = sumTx
+  document.getElementById('sumItems').innerText = sumItems
+  document.getElementById('sumOmzet').innerText = formatRupiah(sumOmzet)
+  document.getElementById('sumDisc').innerText = formatRupiah(sumDisc)
+
+  // transactions table
+  const transArea = document.getElementById('transArea'); transArea.innerHTML = ''
+  const tbl = document.createElement('table')
+  tbl.innerHTML = '<thead><tr><th>ID</th><th>Tanggal</th><th>User Items</th><th>Total</th><th>Diskon</th><th>Status</th><th>Aksi</th></tr></thead>'
+  const tb = document.createElement('tbody')
+  list.slice().reverse().forEach(tx=>{
+    const tr = document.createElement('tr')
+    tr.innerHTML = `<td>${tx.id}</td>
+      <td>${new Date(tx.date).toLocaleString()}</td>
+      <td>${tx.items.map(i=>i.name+'('+i.qty+')').join(', ')}</td>
+      <td>${formatRupiah(tx.total)}</td>
+      <td>${formatRupiah(tx.discount||0)}</td>
+      <td style="color:${tx.status==='voided'? 'var(--danger)':'inherit'}">${tx.status||'normal'}</td>
+      <td><button class="ghost viewTx" data-id="${tx.id}">Detail</button>
+          <button class="ghost ${tx.status==='voided'?'restoreTx':'voidTx'}" data-id="${tx.id}">${tx.status==='voided'?'Restore':'Void'}</button></td>`
+    tb.appendChild(tr)
+  })
+  tbl.appendChild(tb); transArea.appendChild(tbl)
+
+  // rekap per-produk
+  const prodAgg = {}
+  transactions.forEach(tx=>{
+    if(tx.status==='voided') return
+    const t = new Date(tx.date).getTime()
+    if(t < fromT || t > toT) return
+    tx.items.forEach(it=>{
+      if(!prodAgg[it.id]) prodAgg[it.id] = {name:it.name, qty:0, revenue:0}
+      prodAgg[it.id].qty += it.qty
+      prodAgg[it.id].revenue += it.qty * it.price
+    })
+  })
+  const prodArea = document.getElementById('prodArea'); prodArea.innerHTML = ''
+  const ptable = document.createElement('table'); const pbody = document.createElement('tbody')
+  ptable.innerHTML = '<thead><tr><th>Produk</th><th>Qty</th><th>Revenue</th></tr></thead>'
+  Object.values(prodAgg).sort((a,b)=>b.qty-a.qty).forEach(p=>{
+    const r = document.createElement('tr'); r.innerHTML = `<td>${p.name}</td><td>${p.qty}</td><td>${formatRupiah(p.revenue)}</td>`; pbody.appendChild(r)
+  })
+  ptable.appendChild(pbody); prodArea.appendChild(ptable)
+}
+
+/* action handlers: view detail, void, restore */
+document.addEventListener('click', e=>{
+  if(e.target.matches('.viewTx')){
+    const id = Number(e.target.dataset.id); const tx = transactions.find(t=>t.id===id)
+    if(!tx) return
+    showModal(tx)
+  } else if(e.target.matches('.voidTx')){
+    const id = Number(e.target.dataset.id); if(!confirm('Void transaksi ini?')) return
+    const tx = transactions.find(t=>t.id===id); if(tx){ tx.status='voided'; saveAll(); renderReport(); alert('Transaksi di-void') }
+  } else if(e.target.matches('.restoreTx')){
+    const id = Number(e.target.dataset.id); if(!confirm('Restore transaksi ini?')) return
+    const tx = transactions.find(t=>t.id===id); if(tx){ tx.status='normal'; saveAll(); renderReport(); alert('Transaksi direstore') }
+  }
+})
+
+/* modal functions */
+const modal = document.getElementById('modal'); const modalBody = document.getElementById('modalBody')
+function showModal(tx){
+  modal.classList.remove('hidden'); modal.innerHTML = `<div class="modal-bg"><div class="modal">
+    <h3>Detail Transaksi #${tx.id}</h3>
+    <div><b>Tanggal:</b> ${new Date(tx.date).toLocaleString()}</div>
+    <div style="margin-top:8px">${tx.items.map(i=>`<div>${i.name} x${i.qty} — ${formatRupiah(i.price*i.qty)}</div>`).join('')}</div>
+    <div style="margin-top:8px"><b>Subtotal:</b> ${formatRupiah(tx.subtotal)}</div>
+    <div><b>Pajak:</b> ${formatRupiah(tx.tax)}</div>
+    <div><b>Diskon:</b> ${formatRupiah(tx.discount||0)}</div>
+    <div><b>Total:</b> ${formatRupiah(tx.total)}</div>
+    <div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end">
+      <button id="modalClose" class="btn">Tutup</button>
+      <button id="modalVoidBtn" class="ghost">${tx.status==='voided' ? 'Restore' : 'Void'}</button>
+    </div>
+  </div></div>`
+  // handlers inside modal
+  document.getElementById('modalClose').addEventListener('click', ()=>{ modal.classList.add('hidden'); modal.innerHTML='' })
+  document.getElementById('modalVoidBtn').addEventListener('click', ()=>{
+    if(tx.status==='voided'){ tx.status='normal' } else { if(!confirm('Void transaksi ini?')) return; tx.status='voided' }
+    saveAll(); renderReport(); modal.classList.add('hidden'); modal.innerHTML=''; alert('Status diubah')
+  })
+}
+
+/* ----------------- CHARTS (lazy load Chart.js) ----------------- */
+let chartsLoaded=false, barChart=null, pieChart=null
+document.getElementById('genCharts').addEventListener('click', ()=>{ if(!chartsLoaded){ loadChartLib().then(renderCharts) } else renderCharts() })
+document.getElementById('downloadCharts').addEventListener('click', ()=>{ // combine canvases into images for download (simple)
+  if(!barChart && !pieChart) return alert('Buat grafik dulu')
+  const barCanvas = document.getElementById('barChart'), pieCanvas = document.getElementById('pieChart')
+  const link = document.createElement('a'); link.href = barCanvas.toDataURL('image/png'); link.download='bar.png'; link.click()
+})
+
+async function loadChartLib(){
+  if(chartsLoaded) return
+  chartsLoaded = true
+  return new Promise((res,rej)=>{
+    const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js'
+    s.onload = ()=> res(); s.onerror = ()=> rej('Chart load failed'); document.head.appendChild(s)
+  })
+}
+
+function renderCharts(){
+  const from = document.getElementById('rFrom').value
+  const to = document.getElementById('rTo').value
+  const fromT = from ? new Date(from).setHours(0,0,0,0) : -Infinity
+  const toT = to ? new Date(to).setHours(23,59,59,999) : Infinity
+  const agg = {}
+  transactions.forEach(tx=>{
+    if(tx.status==='voided') return
+    const t = new Date(tx.date).getTime(); if(t < fromT || t > toT) return
+    tx.items.forEach(it=>{
+      if(!agg[it.id]) agg[it.id] = {name:it.name, qty:0, rev:0}
+      agg[it.id].qty += it.qty; agg[it.id].rev += it.qty*it.price
+    })
+  })
+  const labels = Object.values(agg).map(x=>x.name)
+  const qtyData = Object.values(agg).map(x=>x.qty)
+  const revData = Object.values(agg).map(x=>x.rev)
+  // bar
+  const barCtx = document.getElementById('barChart').getContext('2d')
+  if(barChart) barChart.destroy()
+  barChart = new Chart(barCtx, {type:'bar', data:{labels, datasets:[{label:'Qty terjual', data:qtyData, backgroundColor:'rgba(37,99,235,0.7)'}]}, options:{plugins:{legend:{display:false}}}})
+  // pie
+  const pieCtx = document.getElementById('pieChart').getContext('2d')
+  if(pieChart) pieChart.destroy()
+  pieChart = new Chart(pieCtx, {type:'pie', data:{labels, datasets:[{label:'Revenue', data:revData, backgroundColor: labels.map((_,i)=>['#60a5fa','#06b6d4','#34d399','#f59e0b','#f97316'][i%5])}]}, options:{}})
+}
+
+/* ----------------- EXPORT / IMPORT / HELPERS ----------------- */
+function exportDataJSON(){
+  const data = {products, transactions}
+  downloadBlob(JSON.stringify(data,null,2),'kasir_backup.json','application/json')
+}
+function importDataJSON(e){
+  const f = e.target.files[0]; if(!f) return
+  const r = new FileReader(); r.onload = ev=>{
+    try{ const d = JSON.parse(ev.target.result)
+      if(d.products) products = d.products
+      if(d.transactions) transactions = d.transactions
+      saveAll(); renderProducts(); renderCart(); alert('Import sukses')
+    }catch(err){ alert('File tidak valid') }
+  }; r.readAsText(f); e.target.value=''
+}
+
+function exportReportCSV(){
+  const from = document.getElementById('rFrom').value
+  const to = document.getElementById('rTo').value
+  const fromT = from ? new Date(from).setHours(0,0,0,0) : -Infinity
+  const toT = to ? new Date(to).setHours(23,59,59,999) : Infinity
+  const list = transactions.filter(tx=>{
+    const t = new Date(tx.date).getTime(); if(t<fromT||t>toT) return false; return true
+  })
+  if(list.length===0) return alert('Tidak ada data')
+  let csv = 'id,tanggal,total,diskon,status\n'
+  list.forEach(tx=> csv += `${tx.id},"${new Date(tx.date).toLocaleString()}",${tx.total},${tx.discount||0},${tx.status||'normal'}\n`)
+  downloadBlob(csv,'laporan.csv','text/csv')
+}
+document.getElementById('expReportCSV').addEventListener('click', exportReportCSV)
+
+document.getElementById('expReportPDF').addEventListener('click', ()=>{
+  const from = document.getElementById('rFrom').value
+  const to = document.getElementById('rTo').value
+  const fromT = from ? new Date(from).setHours(0,0,0,0) : -Infinity
+  const toT = to ? new Date(to).setHours(23,59,59,999) : Infinity
+  const list = transactions.filter(tx=>{ const t=new Date(tx.date).getTime(); if(t<fromT||t>toT) return false; return true })
+  if(list.length===0) return alert('Tidak ada data')
+  const { jsPDF } = window.jspdf; const doc = new jsPDF(); let y=20; doc.text('Laporan Transaksi',20,y); y+=10
+  list.forEach(tx=>{ doc.text(`${new Date(tx.date).toLocaleString()} | ${formatRupiah(tx.total)} | ${tx.status||'normal'}`,20,y); y+=8 })
+  doc.save('laporan.pdf')
+})
+
+function downloadBlob(content, filename, mime){
+  const blob = new Blob([content], {type: mime})
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a'); a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url)
+}
+
+/* helper */
+function formatRupiah(n){ return 'Rp' + Number(n).toLocaleString('id-ID') }
+
+/* ----------------- INITIALIZE ----------------- */
+renderProducts(); renderCart();
+
+/* render report when button generate clicked */
+document.getElementById('genReport').addEventListener('click', ()=>{ renderReport(); if(!chartsLoaded) loadChartLib(); })
+
+/* print report */
+document.getElementById('printReport').addEventListener('click', ()=>{ window.print() })
+
+</script>
+</body>
+</html>
